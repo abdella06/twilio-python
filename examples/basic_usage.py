@@ -1,45 +1,50 @@
 import os
-
+from flask import Flask, request
+from twilio.twiml.messaging_response import MessagingResponse
+import requests
+from dotenv import load_dotenv
 from twilio.rest import Client
-from twilio.twiml.voice_response import VoiceResponse
 
-ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID")
-AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN")
+# Load environment variables
+load_dotenv()
 
+# Twilio Credentials (from .env file)
+ACCOUNT_SID = os.getenv("AC257df73df37631e0284e0fc675065502")
+AUTH_TOKEN = os.getenv("8cbcbd6b5c5d1e63d9d305c7aebfc43f")
+TWILIO_WHATSAPP_NUMBER = os.getenv("+14155238886")
 
-def example():
-    """
-    Some example usage of different twilio resources.
-    """
-    client = Client(ACCOUNT_SID, AUTH_TOKEN)
+client = Client(ACCOUNT_SID, AUTH_TOKEN)
 
-    # Get all messages
-    all_messages = client.messages.list()
-    print("There are {} messages in your account.".format(len(all_messages)))
+app = Flask(__name__)
 
-    # Get only last 10 messages...
-    some_messages = client.messages.list(limit=10)
-    print("Here are the last 10 messages in your account:")
-    for m in some_messages:
-        print(m)
+# Function to send WhatsApp messages
+def send_whatsapp_message(to, message):
+    client.messages.create(
+        from_=TWILIO_WHATSAPP_NUMBER,
+        to=to,
+        body=message
+    )
 
-    # Get messages in smaller pages...
-    all_messages = client.messages.list(page_size=10)
-    print("There are {} messages in your account.".format(len(all_messages)))
+@app.route("/webhook", methods=["POST"])
+def whatsapp_bot():
+    incoming_msg = request.form.get("Body").strip().lower()
+    sender = request.form.get("From")
+    response = MessagingResponse()
+    msg = response.message()
 
-    print("Sending a message...")
-    new_message = client.messages.create(to="XXXX", from_="YYYY", body="Twilio rocks!")
+    # Define responses
+    if "hello" in incoming_msg:
+        msg.body("Hi! How can I help you?")
+    elif "how are you" in incoming_msg:
+        msg.body("I'm just a bot, but I'm good! What about you?")
+    elif "how do you feel today" in incoming_msg:
+        msg.body("I'm always ready to assist you! 😊")
+    elif "give me your instagram" in incoming_msg:
+        msg.body("You can follow me on Instagram: @your_instagram_handle")
+    else:
+        msg.body("I didn't understand that. Try asking about the weather, greetings, or my Instagram.")
 
-    print("Making a call...")
-    new_call = client.calls.create(to="XXXX", from_="YYYY", method="GET")
-
-    print("Serving TwiML")
-    twiml_response = VoiceResponse()
-    twiml_response.say("Hello!")
-    twiml_response.hangup()
-    twiml_xml = twiml_response.to_xml()
-    print("Generated twiml: {}".format(twiml_xml))
-
+    return str(response)
 
 if __name__ == "__main__":
-    example()
+    app.run(port=5000, debug=True)
